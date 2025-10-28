@@ -10,7 +10,7 @@
 //! - [`Nonce`]: A 192-bit nonce that should be sampled randomly per encryption operation
 //! - [`EncryptedData`]: Encrypted data
 
-use alloc::{string::ToString, vec::Vec};
+use alloc::vec::Vec;
 
 use chacha20poly1305::{
     XChaCha20Poly1305,
@@ -64,11 +64,6 @@ pub struct Nonce {
 impl Nonce {
     /// Creates a new random nonce using the provided random number generator
     pub fn with_rng<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
-        // we use a seedable CSPRNG and seed it with `rng`
-        // this is a work around the fact that the version of the `rand` dependency in our crate
-        // is different than the one used in the `chacha20poly1305`. This solution will
-        // no longer be needed once `chacha20poly1305` gets a new release with a version of
-        // the `rand` dependency matching ours
         use chacha20poly1305::aead::rand_core::SeedableRng;
         let mut seed = [0_u8; 32];
         rand::RngCore::fill_bytes(rng, &mut seed);
@@ -103,11 +98,6 @@ impl SecretKey {
 
     /// Creates a new random secret key using the provided random number generator
     pub fn with_rng<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
-        // we use a seedable CSPRNG and seed it with `rng`
-        // this is a work around the fact that the version of the `rand` dependency in our crate
-        // is different than the one used in the `chacha20poly1305`. This solution will
-        // no longer be needed once `chacha20poly1305` gets a new release with a version of
-        // the `rand` dependency matching ours
         use chacha20poly1305::aead::rand_core::SeedableRng;
         let mut seed = [0_u8; 32];
         rand::RngCore::fill_bytes(rng, &mut seed);
@@ -120,15 +110,11 @@ impl SecretKey {
     // BYTE ENCRYPTION
     // --------------------------------------------------------------------------------------------
 
-    /// Encrypts and authenticates the provided data using this secret key and a random
-    /// nonce
     #[cfg(feature = "std")]
     pub fn encrypt_bytes(&self, data: &[u8]) -> Result<EncryptedData, EncryptionError> {
         self.encrypt_bytes_with_associated_data(data, &[])
     }
 
-    /// Encrypts the provided data and authenticates both the ciphertext as well as
-    /// the provided associated data using this secret key and a random nonce
     #[cfg(feature = "std")]
     pub fn encrypt_bytes_with_associated_data(
         &self,
@@ -141,7 +127,6 @@ impl SecretKey {
         self.encrypt_bytes_with_nonce(data, associated_data, nonce)
     }
 
-    /// Encrypts the provided data using this secret key and a specified nonce
     pub fn encrypt_bytes_with_nonce(
         &self,
         data: &[u8],
@@ -166,15 +151,11 @@ impl SecretKey {
     // ELEMENT ENCRYPTION
     // --------------------------------------------------------------------------------------------
 
-    /// Encrypts and authenticates the provided sequence of field elements using this secret key
-    /// and a random nonce.
     #[cfg(feature = "std")]
     pub fn encrypt_elements(&self, data: &[Felt]) -> Result<EncryptedData, EncryptionError> {
         self.encrypt_elements_with_associated_data(data, &[])
     }
 
-    /// Encrypts the provided sequence of field elements and authenticates both the ciphertext as
-    /// well as the provided associated data using this secret key and a random nonce.
     #[cfg(feature = "std")]
     pub fn encrypt_elements_with_associated_data(
         &self,
@@ -188,8 +169,6 @@ impl SecretKey {
         self.encrypt_elements_with_nonce(data, associated_data, nonce)
     }
 
-    /// Encrypts the provided sequence of field elements and authenticates both the ciphertext as
-    /// well as the provided associated data using this secret key and the specified nonce.
     pub fn encrypt_elements_with_nonce(
         &self,
         data: &[Felt],
@@ -207,11 +186,6 @@ impl SecretKey {
     // BYTE DECRYPTION
     // --------------------------------------------------------------------------------------------
 
-    /// Decrypts the provided encrypted data using this secret key.
-    ///
-    /// # Errors
-    /// Returns an error if decryption fails or if the underlying data was encrypted as elements
-    /// rather than as bytes.
     pub fn decrypt_bytes(
         &self,
         encrypted_data: &EncryptedData,
@@ -219,11 +193,6 @@ impl SecretKey {
         self.decrypt_bytes_with_associated_data(encrypted_data, &[])
     }
 
-    /// Decrypts the provided encrypted data given some associated data using this secret key.
-    ///
-    /// # Errors
-    /// Returns an error if decryption fails or if the underlying data was encrypted as elements
-    /// rather than as bytes.
     pub fn decrypt_bytes_with_associated_data(
         &self,
         encrypted_data: &EncryptedData,
@@ -238,7 +207,6 @@ impl SecretKey {
         self.decrypt_bytes_with_associated_data_unchecked(encrypted_data, associated_data)
     }
 
-    /// Decrypts the provided encrypted data given some associated data using this secret key.
     fn decrypt_bytes_with_associated_data_unchecked(
         &self,
         encrypted_data: &EncryptedData,
@@ -257,11 +225,6 @@ impl SecretKey {
     // ELEMENT DECRYPTION
     // --------------------------------------------------------------------------------------------
 
-    /// Decrypts the provided encrypted data using this secret key.
-    ///
-    /// # Errors
-    /// Returns an error if decryption fails or if the underlying data was encrypted as bytes
-    /// rather than as field elements.
     pub fn decrypt_elements(
         &self,
         encrypted_data: &EncryptedData,
@@ -269,11 +232,6 @@ impl SecretKey {
         self.decrypt_elements_with_associated_data(encrypted_data, &[])
     }
 
-    /// Decrypts the provided encrypted data, given some associated data, using this secret key.
-    ///
-    /// # Errors
-    /// Returns an error if decryption fails or if the underlying data was encrypted as bytes
-    /// rather than as field elements.
     pub fn decrypt_elements_with_associated_data(
         &self,
         encrypted_data: &EncryptedData,
@@ -399,7 +357,7 @@ impl Deserializable for EncryptedData {
     fn read_from<R: ByteReader>(source: &mut R) -> Result<Self, DeserializationError> {
         let data_type_value: u8 = source.read_u8()?;
         let data_type = data_type_value.try_into().map_err(|_| {
-            DeserializationError::InvalidValue("invalid data type value".to_string())
+            DeserializationError::InvalidValue("invalid data type value".into())
         })?;
 
         let ciphertext = Vec::<u8>::read_from(source)?;
